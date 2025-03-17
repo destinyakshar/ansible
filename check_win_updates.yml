@@ -1,0 +1,40 @@
+---
+- name: Gather information about missing Windows patches for all severity levels
+  hosts: winsys
+  gather_facts: no
+  vars:
+    # Define all severity levels to check
+    patch_severity: ["Critical", "Important", "Moderate", "Low"]
+
+  tasks:
+    - name: Check for missing Windows updates
+      win_updates:
+        category_names:
+          - SecurityUpdates
+          - CriticalUpdates
+          - DefinitionUpdates
+          - FeaturePacks
+          - ServicePacks
+          - Tools
+          - UpdateRollups
+          - Updates
+        state: searched
+      register: windows_updates
+
+    - name: Filter missing patches by severity
+      set_fact:
+        missing_patches: >-
+          {{
+            windows_updates.updates | selectattr('installed', 'equalto', false)
+                                   | selectattr('severity', 'in', patch_severity)
+                                   | list
+          }}
+
+    - name: Display missing patches based on severity
+      debug:
+        var: missing_patches
+
+    - name: Display summary of missing patches
+      debug:
+        msg: >
+          Total missing patches (Severity: {{ patch_severity }}): {{ missing_patches | length }}
