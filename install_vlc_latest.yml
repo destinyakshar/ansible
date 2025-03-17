@@ -3,11 +3,14 @@
   hosts: winsys
   gather_facts: no
   tasks:
+    - name: Ensure C:\Temp directory exists
+      win_file:
+        path: C:\Temp
+        state: directory
+
     - name: Get the latest VLC download URL
       win_shell: |
-        $url = "https://www.videolan.org/vlc/download-windows.html"
-        $response = Invoke-WebRequest -Uri $url -UseBasicParsing
-        $downloadLink = ($response.Links | Where-Object { $_.outerHTML -match "Download VLC" }).href
+        $downloadLink = "https://get.videolan.org/vlc/3.0.18/win64/vlc-3.0.18-win64.exe"
         echo $downloadLink
       register: vlc_download_url
 
