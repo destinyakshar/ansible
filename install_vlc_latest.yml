@@ -1,31 +1,35 @@
 ---
-- name: Upgrade VLC to the latest version on Windows
-  hosts: winsys  # Make sure this matches the group name in your inventory
-  gather_facts: yes
+- name: Upgrade VLC Media Player to the latest version on Windows hosts
+  hosts: winsys
+  gather_facts: no
   tasks:
+    - name: Get the latest VLC download URL
+      win_shell: |
+        $url = "https://www.videolan.org/vlc/download-windows.html"
+        $response = Invoke-WebRequest -Uri $url -UseBasicParsing
+        $downloadLink = ($response.Links | Where-Object { $_.outerHTML -match "Download VLC" }).href
+        echo $downloadLink
+      register: vlc_download_url
 
-    - name: Check if VLC is installed
-      ansible.windows.win_registry:
-        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\VLC media player
-        name: DisplayName
-      register: vlc_installed
-      ignore_errors: yes
+    - name: Display the download URL
+      debug:
+        var: vlc_download_url.stdout
 
-    - name: Download the latest VLC installer if VLC is installed
-      ansible.windows.win_get_url:
-        url: "https://get.videolan.org/vlc/latest/win64/vlc-latest-win64.exe"
-        dest: "C:\\Temp\\vlc-latest-win64.exe"
-      when: vlc_installed is defined
+    - name: Download the latest VLC installer
+      win_get_url:
+        url: "{{ vlc_download_url.stdout }}"
+        dest: C:\Temp\vlc_installer.exe
+      when: vlc_download_url.stdout != ""
 
-    - name: Install or Upgrade VLC
-      ansible.windows.win_package:
-        path: "C:\\Temp\\vlc-latest-win64.exe"
-        arguments: "/S"  # Silent install for upgrade
+    - name: Upgrade VLC Media Player
+      win_package:
+        path: C:\Temp\vlc_installer.exe
+        arguments: /S
         state: present
-      when: vlc_installed is defined
+      when: vlc_download_url.stdout != ""
 
-    - name: Remove the installer after installation
-      ansible.windows.win_file:
-        path: "C:\\Temp\\vlc-latest-win64.exe"
+    - name: Clean up the installer
+      win_file:
+        path: C:\Temp\vlc_installer.exe
         state: absent
-      when: vlc_installed is defined
+      when: vlc_download_url.stdout != ""
