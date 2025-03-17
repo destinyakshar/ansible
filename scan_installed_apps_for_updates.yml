@@ -26,22 +26,41 @@
 
     - name: Check for latest versions of installed applications (using custom logic)
       win_shell: |
-        $apps = {{ installed_apps_list | to_json }}
+        # Convert the JSON input to a PowerShell object
+        $apps = '{{ installed_apps_list | to_json }}' | ConvertFrom-Json
+
         $results = @()
         foreach ($app in $apps) {
           # Placeholder logic to fetch the latest version (replace with your own logic)
           $latestVersion = "Unknown"  # Default value
+
+          # Example: Fetch latest version for Google Chrome
           if ($app.Name -match "Google Chrome") {
-            $latestVersion = (Invoke-WebRequest -Uri "https://omahaproxy.appspot.com/all.json" -UseBasicParsing | ConvertFrom-Json)[0].versions[0].version
-          } elseif ($app.Name -match "VLC") {
-            $latestVersion = (Invoke-WebRequest -Uri "https://api.github.com/repos/videolan/vlc/releases/latest" -UseBasicParsing | ConvertFrom-Json).tag_name
+            try {
+              $latestVersion = (Invoke-WebRequest -Uri "https://omahaproxy.appspot.com/all.json" -UseBasicParsing | ConvertFrom-Json)[0].versions[0].version
+            } catch {
+              $latestVersion = "Error fetching version"
+            }
           }
+
+          # Example: Fetch latest version for VLC
+          elseif ($app.Name -match "VLC") {
+            try {
+              $latestVersion = (Invoke-WebRequest -Uri "https://api.github.com/repos/videolan/vlc/releases/latest" -UseBasicParsing | ConvertFrom-Json).tag_name
+            } catch {
+              $latestVersion = "Error fetching version"
+            }
+          }
+
+          # Add the result to the array
           $results += [PSCustomObject]@{
             Name           = $app.Name
             CurrentVersion = $app.Version
             LatestVersion  = $latestVersion
           }
         }
+
+        # Output the results as JSON
         $results | ConvertTo-Json
       register: app_updates
       when: installed_apps_list | length > 0
