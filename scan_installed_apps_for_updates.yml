@@ -1,19 +1,25 @@
 ---
-- name: Scan installed applications for updates on Windows target nodes (without Chocolatey)
+- name: List all installed applications and check for updates on Windows target nodes
   hosts: winsys
   gather_facts: no
   tasks:
-    - name: Get list of installed applications and their versions
+    - name: Get list of all installed applications and their versions
       win_shell: |
-        Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
-        Select-Object DisplayName, DisplayVersion |
-        Where-Object { $_.DisplayName -ne $null } |
-        ForEach-Object {
-          [PSCustomObject]@{
-            Name    = $_.DisplayName
-            Version = $_.DisplayVersion
-          }
-        } | ConvertTo-Json
+        # Get 64-bit applications
+        $64bitApps = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* |
+          Select-Object DisplayName, DisplayVersion |
+          Where-Object { $_.DisplayName -ne $null }
+
+        # Get 32-bit applications
+        $32bitApps = Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
+          Select-Object DisplayName, DisplayVersion |
+          Where-Object { $_.DisplayName -ne $null }
+
+        # Combine both lists and remove duplicates
+        $allApps = ($64bitApps + $32bitApps) | Sort-Object DisplayName -Unique
+
+        # Convert to JSON
+        $allApps | ConvertTo-Json
       register: installed_apps
 
     - name: Set installed applications fact
@@ -31,11 +37,14 @@
 
         $results = @()
         foreach ($app in $apps) {
+          # Fetch the current version
+          $currentVersion = $app.DisplayVersion
+
           # Placeholder logic to fetch the latest version (replace with your own logic)
           $latestVersion = "Unknown"  # Default value
 
           # Example: Fetch latest version for Google Chrome
-          if ($app.Name -match "Google Chrome") {
+          if ($app.DisplayName -match "Google Chrome") {
             try {
               $latestVersion = (Invoke-WebRequest -Uri "https://omahaproxy.appspot.com/all.json" -UseBasicParsing | ConvertFrom-Json)[0].versions[0].version
             } catch {
@@ -44,7 +53,7 @@
           }
 
           # Example: Fetch latest version for VLC
-          elseif ($app.Name -match "VLC") {
+          elseif ($app.DisplayName -match "VLC") {
             try {
               $latestVersion = (Invoke-WebRequest -Uri "https://api.github.com/repos/videolan/vlc/releases/latest" -UseBasicParsing | ConvertFrom-Json).tag_name
             } catch {
@@ -54,8 +63,8 @@
 
           # Add the result to the array
           $results += [PSCustomObject]@{
-            Name           = $app.Name
-            CurrentVersion = $app.Version
+            Name           = $app.DisplayName
+            CurrentVersion = $currentVersion
             LatestVersion  = $latestVersion
           }
         }
