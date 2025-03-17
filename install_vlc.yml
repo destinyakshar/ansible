@@ -1,0 +1,25 @@
+- name: Install VLC Player 3.0.16 on Windows
+  hosts: Windows Machines
+  gather_facts: no
+  tasks:
+
+    - name: Download VLC installer
+      win_get_url:
+        url: "https://get.videolan.org/vlc/3.0.16/win64/vlc-3.0.16-win64.exe"
+        dest: "C:\\Users\\Public\\Downloads\\vlc-3.0.16-win64.exe"
+
+    - name: Install VLC Player
+      win_package:
+        path: "C:\\Users\\Public\\Downloads\\vlc-3.0.16-win64.exe"
+        arguments: "/S"   # Silent installation
+        state: present
+
+    - name: Verify VLC installation
+      win_stat:
+        path: "C:\\Program Files\\VideoLAN\\VLC\\vlc.exe"
+      register: vlc_installed
+
+    - name: Display VLC installation result
+      debug:
+        msg: "VLC is successfully installed!"  
+      when: vlc_installed.stat.exists
