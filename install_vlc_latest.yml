@@ -1,6 +1,6 @@
 ---
 - name: Upgrade VLC to the latest version on Windows
-  hosts: windows  # Target your Windows hosts
+  hosts: winsys  # Target your Windows hosts
   gather_facts: yes
   tasks:
   
