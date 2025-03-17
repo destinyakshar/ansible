@@ -1,5 +1,5 @@
 - name: Install VLC Player 3.0.16 on Windows
-  hosts: Windows Machines
+  hosts: winsys
   gather_facts: no
   tasks:
 
