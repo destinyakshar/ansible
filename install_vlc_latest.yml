@@ -1,0 +1,31 @@
+---
+- name: Upgrade VLC to the latest version on Windows
+  hosts: windows  # Target your Windows hosts
+  gather_facts: yes
+  tasks:
+  
+    - name: Check if VLC is installed
+      win_registry:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\VLC media player
+        name: DisplayName
+      register: vlc_installed
+      ignore_errors: yes
+
+    - name: Download the latest VLC installer if VLC is installed
+      win_get_url:
+        url: "https://get.videolan.org/vlc/latest/win64/vlc-latest-win64.exe"
+        dest: "C:\\Temp\\vlc-latest-win64.exe"
+      when: vlc_installed is defined
+
+    - name: Install or Upgrade VLC
+      win_package:
+        path: "C:\\Temp\\vlc-latest-win64.exe"
+        arguments: "/S"  # Silent install for upgrade
+        state: present
+      when: vlc_installed is defined
+
+    - name: Remove the installer after installation
+      win_file:
+        path: "C:\\Temp\\vlc-latest-win64.exe"
+        state: absent
+      when: vlc_installed is defined
