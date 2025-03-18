@@ -1,0 +1,20 @@
+---
+- name: Scan Ubuntu system for pending patches
+  hosts: Ubuntu
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Check for available updates
+      apt:
+        upgrade: dist
+        update_cache: no
+      register: apt_updates
+
+    - name: List pending patches
+      debug:
+        msg: "Pending patches: {{ apt_updates.stdout_lines }}"
